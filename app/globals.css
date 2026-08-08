@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #f5c542;
+  --ink: #111111;
+  --muted: #666666;
+  --surface: #f7f7f5;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: white; color: var(--ink); }
+a { text-decoration: none; }
+button, input { font: inherit; }
+
+.container-tight { width: min(1120px, calc(100% - 32px)); margin-inline: auto; }
+.gold-gradient { background: linear-gradient(135deg, #ffd95a 0%, #f5c542 55%, #e3aa16 100%); }
+.shadow-soft { box-shadow: 0 18px 55px rgba(0,0,0,.08); }
