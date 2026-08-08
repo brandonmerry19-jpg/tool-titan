@@ -1,39 +1,59 @@
+
 name: Unpack Tool Titan
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
-permissions:
-  contents: write
+  permissions:
+    contents: write
 
-jobs:
-  unpack:
-    runs-on: ubuntu-latest
+    jobs:
+      unpack:
+          runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+              steps:
+                    - name: Check out repository
+                            uses: actions/checkout@v4
 
-      - name: Unpack Tool Titan
-        run: |
-          rm -rf /tmp/tool-titan
-          mkdir -p /tmp/tool-titan
-          unzip -o tool-titan-v1.zip -d /tmp/tool-titan
+                                  - name: Unpack Tool Titan
+                                          shell: bash
+                                                  run: |
+                                                            set -euo pipefail
 
-          if [ -d "/tmp/tool-titan/tool-titan" ]; then
-            cp -a /tmp/tool-titan/tool-titan/. .
-          else
-            cp -a /tmp/tool-titan/. .
-          fi
+                                                                      ZIP="tool-titan-v1.zip"
+                                                                                TEMP="/tmp/tool-titan"
 
-          rm -f tool-titan-v1.zip
+                                                                                          if [ ! -f "$ZIP" ]; then
+                                                                                                      echo "ERROR: $ZIP was not found."
+                                                                                                                  exit 1
+                                                                                                                            fi
 
-      - name: Commit project files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "Unpack Tool Titan project"
-          git push
+                                                                                                                                      rm -rf "$TEMP"
+                                                                                                                                                mkdir -p "$TEMP"
+
+                                                                                                                                                          unzip -o "$ZIP" -d "$TEMP"
+
+                                                                                                                                                                    if [ -d "$TEMP/tool-titan" ]; then
+                                                                                                                                                                                cp -a "$TEMP/tool-titan/." .
+                                                                                                                                                                                          else
+                                                                                                                                                                                                      cp -a "$TEMP/." .
+                                                                                                                                                                                                                fi
+
+                                                                                                                                                                                                                          rm -rf "$TEMP"
+                                                                                                                                                                                                                                    rm -f "$ZIP"
+
+                                                                                                                                                                                                                                          - name: Commit changes
+                                                                                                                                                                                                                                                  shell: bash
+                                                                                                                                                                                                                                                          run: |
+                                                                                                                                                                                                                                                                    git config user.name "github-actions[bot]"
+                                                                                                                                                                                                                                                                              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                                                                                                                                                                                                                                                                                        git add -A
+
+                                                                                                                                                                                                                                                                                                  if git diff --cached --quiet; then
+                                                                                                                                                                                                                                                                                                              echo "No changes to commit."
+                                                                                                                                                                                                                                                                                                                          exit 0
+                                                                                                                                                                                                                                                                                                                                    fi
+
+                                                                                                                                                                                                                                                                                                                                              git commit -m "Unpack Tool Titan"
+                                                                                                                                                                                                                                                                                                                                                        git push
