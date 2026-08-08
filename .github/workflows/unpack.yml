@@ -1,0 +1,39 @@
+name: Unpack Tool Titan
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Unpack Tool Titan
+        run: |
+          rm -rf /tmp/tool-titan
+          mkdir -p /tmp/tool-titan
+          unzip -o tool-titan-v1.zip -d /tmp/tool-titan
+
+          if [ -d "/tmp/tool-titan/tool-titan" ]; then
+            cp -a /tmp/tool-titan/tool-titan/. .
+          else
+            cp -a /tmp/tool-titan/. .
+          fi
+
+          rm -f tool-titan-v1.zip
+
+      - name: Commit project files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "Unpack Tool Titan project"
+          git push
