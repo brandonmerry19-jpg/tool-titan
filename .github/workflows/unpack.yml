@@ -1,59 +1,52 @@
-
 name: Unpack Tool Titan
 
 on:
   workflow_dispatch:
 
-  permissions:
-    contents: write
+permissions:
+  contents: write
 
-    jobs:
-      unpack:
-          runs-on: ubuntu-latest
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
 
-              steps:
-                    - name: Check out repository
-                            uses: actions/checkout@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-                                  - name: Unpack Tool Titan
-                                          shell: bash
-                                                  run: |
-                                                            set -euo pipefail
+      - name: Unpack Tool Titan
+        shell: bash
+        run: |
+          set -euo pipefail
 
-                                                                      ZIP="tool-titan-v1.zip"
-                                                                                TEMP="/tmp/tool-titan"
+          ZIP="tool-titan-v1.zip"
+          TEMP="/tmp/tool-titan"
 
-                                                                                          if [ ! -f "$ZIP" ]; then
-                                                                                                      echo "ERROR: $ZIP was not found."
-                                                                                                                  exit 1
-                                                                                                                            fi
+          rm -rf "$TEMP"
+          mkdir -p "$TEMP"
 
-                                                                                                                                      rm -rf "$TEMP"
-                                                                                                                                                mkdir -p "$TEMP"
+          if [ ! -f "$ZIP" ]; then
+            echo "ERROR: $ZIP was not found."
+            exit 1
+          fi
 
-                                                                                                                                                          unzip -o "$ZIP" -d "$TEMP"
+          unzip -q "$ZIP" -d "$TEMP"
 
-                                                                                                                                                                    if [ -d "$TEMP/tool-titan" ]; then
-                                                                                                                                                                                cp -a "$TEMP/tool-titan/." .
-                                                                                                                                                                                          else
-                                                                                                                                                                                                      cp -a "$TEMP/." .
-                                                                                                                                                                                                                fi
+          cp -R "$TEMP"/. ./
 
-                                                                                                                                                                                                                          rm -rf "$TEMP"
-                                                                                                                                                                                                                                    rm -f "$ZIP"
+          rm -f "$ZIP"
 
-                                                                                                                                                                                                                                          - name: Commit changes
-                                                                                                                                                                                                                                                  shell: bash
-                                                                                                                                                                                                                                                          run: |
-                                                                                                                                                                                                                                                                    git config user.name "github-actions[bot]"
-                                                                                                                                                                                                                                                                              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-                                                                                                                                                                                                                                                                                        git add -A
+          git add -A
 
-                                                                                                                                                                                                                                                                                                  if git diff --cached --quiet; then
-                                                                                                                                                                                                                                                                                                              echo "No changes to commit."
-                                                                                                                                                                                                                                                                                                                          exit 0
-                                                                                                                                                                                                                                                                                                                                    fi
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
 
-                                                                                                                                                                                                                                                                                                                                              git commit -m "Unpack Tool Titan"
-                                                                                                                                                                                                                                                                                                                                                        git push
+          git commit -m "Unpack Tool Titan project"
+          git push
