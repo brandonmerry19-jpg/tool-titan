@@ -1,0 +1,114 @@
+name: ChatGPT PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  chatgpt-review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+          git diff origin/main...pr-branch > /tmp/pr.diff
+          cat /tmp/pr.diff
+
+      - name: Review with ChatGPT
+        id: review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PR_DIFF: ${{ steps.diff.outputs.diff }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import subprocess
+          import json
+          
+          try:
+              from openai import OpenAI
+          except ImportError:
+              subprocess.check_call(["pip", "install", "openai"])
+              from openai import OpenAI
+          
+          api_key = os.getenv("OPENAI_API_KEY")
+          if not api_key:
+              print("Error: OPENAI_API_KEY secret not set")
+              exit(1)
+          
+          client = OpenAI(api_key=api_key)
+          
+          # Read the diff from git
+          result = subprocess.run(["git", "diff", "origin/main...pr-branch"], 
+                                capture_output=True, text=True)
+          diff = result.stdout
+          
+          if not diff:
+              print("No changes detected")
+              exit(0)
+          
+          # Prepare the prompt
+          prompt = f"""Please review this pull request diff and provide constructive feedback. 
+          Focus on:
+          - Code quality and best practices
+          - Potential bugs or issues
+          - Performance considerations
+          - Security concerns
+          - Suggestions for improvement
+          
+          Here's the diff:
+          
+          {diff[:4000]}"""  # Limit to 4000 chars to avoid token limits
+          
+          # Call ChatGPT
+          response = client.chat.completions.create(
+              model="gpt-3.5-turbo",
+              messages=[
+                  {"role": "system", "content": "You are a helpful code reviewer. Provide concise, actionable feedback."},
+                  {"role": "user", "content": prompt}
+              ],
+              max_tokens=500,
+              temperature=0.7
+          )
+          
+          review_text = response.choices[0].message.content
+          
+          # Save review to file for next step
+          with open("/tmp/review.txt", "w") as f:
+              f.write(review_text)
+          
+          print(review_text)
+          EOF
+
+      - name: Post review as comment
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reviewFile = '/tmp/review.txt';
+            
+            let reviewText = '';
+            if (fs.existsSync(reviewFile)) {
+              reviewText = fs.readFileSync(reviewFile, 'utf8');
+            } else {
+              reviewText = '⚠️ ChatGPT review could not be generated. Please check that OPENAI_API_KEY is set.';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🤖 ChatGPT Code Review\n\n${reviewText}`
+            });
